@@ -129,7 +129,6 @@ async def register_slash(ctx, name):
 # register name command end
 
 # names command start
-@commands.has_any_role("Moderator", "Admin")
 async def names_func(ctx):
     names = ['John Doe', 'Jane Doe']
     msg = ''
@@ -144,10 +143,12 @@ async def names_func(ctx):
     await ctx.send(f'```{msg}```')
 
 @client.command()
+@commands.has_any_role("Moderator", "Admin")
 async def names(ctx):
     await names_func(ctx)
 
 @slash.slash(name='names', description='Returns all the registered members from the database')
+@commands.has_any_role("Moderator", "Admin")
 async def names_slash(ctx):
     await names_func(ctx)
 # names command end
