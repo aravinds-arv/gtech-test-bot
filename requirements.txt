@@ -6,8 +6,10 @@ discord==1.7.3
 discord-py-slash-command==3.0.3
 discord.py==1.7.3
 emoji==1.6.1
+greenlet==1.1.2
 idna==3.3
 multidict==5.2.0
 python-dotenv==0.19.2
+SQLAlchemy==1.4.29
 typing_extensions==4.0.1
 yarl==1.7.2

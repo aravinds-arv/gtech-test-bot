@@ -8,6 +8,7 @@ from discord.ext.commands import Bot
 from discord.utils import get
 from discord_slash import SlashCommand
 from dotenv import load_dotenv
+from models import Member, Session, engine
 
 # required intents
 intents = discord.Intents.default()
@@ -20,12 +21,8 @@ DISCORD_TOKEN = os.environ.get('TOKEN')
 client = commands.Bot(command_prefix='!', intents=intents)
 slash = SlashCommand(client,sync_commands=True)
 
-# setting up the database
-conn = sqlite3.connect(':memory:')
-c = conn.cursor()
-c.execute("""CREATE TABLE members (
-            name text
-            )""")
+# setting up local database session
+localSession = Session(bind=engine)
 
 # required guild ids (replace with your guild/server ids)
 welcome_channel = 926017686973083679
@@ -33,13 +30,14 @@ reaction_channel = 926038951729438730
 
 # helper function to fetch a database entry
 def fetch_member(name):
-    c.execute("SELECT * FROM members WHERE name=:name", {'name':name})
-    return c.fetchone()
+    return localSession.query(Member).filter(Member.name==name).first()
+
 
 # helper function to insert a new entry
 def add_member(name):
-    with conn:
-        c.execute("INSERT INTO members VALUES (:name)", {'name':name})
+    new_member = Member(name=name)
+    localSession.add(new_member)
+    localSession.commit()
 
 # bot ready message
 @client.event
@@ -130,17 +128,15 @@ async def register_slash(ctx, name):
 
 # names command start
 async def names_func(ctx):
-    names = ['John Doe', 'Jane Doe']
     msg = ''
-    c.execute("SELECT * FROM members")
-    value = c.fetchone()
-    while value:
-        name = value[0]
-        names.append(name)
-        value = c.fetchone()
-    for name in names:
+    members = localSession.query(Member).all()
+    for member in members:
+        name = member.name
         msg = msg + f'\n{name}'
-    await ctx.send(f'```{msg}```')
+    if msg:
+        await ctx.send(f'```{msg}```')
+    else:
+        await ctx.send("hmm... the database seems empty")
 
 @client.command()
 @commands.has_any_role("Moderator", "Admin")
@@ -159,5 +155,10 @@ async def names_error(ctx, error):
     if isinstance(error, commands.MissingAnyRole):
         await ctx.send('welp.. seems like you don\'t have the permission to do that.')
 
+# names_slash command error handler
+@names_slash.error
+async def names_slash_error(ctx, error):
+    if isinstance(error, commands.MissingAnyRole):
+        await ctx.send('welp.. seems like you don\'t have the permission to do that.')
+
 client.run(DISCORD_TOKEN) # initialize bot
-conn.close() # close database connection
